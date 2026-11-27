@@ -20,7 +20,7 @@ Los objetivos operativos y las obligaciones legales deben validarse antes de uti
 - Autenticación del personal y autorización para administradores y recepcionistas.
 - Gestión y consulta de tipos de habitación, habitaciones, estados operativos y bloqueos.
 - Consulta de disponibilidad y gestión de reservas de una habitación, con asignación inmediata o posterior.
-- Registro de huéspedes titulares, check-in y check-out.
+- Registro de huéspedes titulares, check-in, check-out y gestión manual de ausencias.
 - Lista de espera, avisos consultables en la API y confirmación manual.
 - Tarifas por tipo y fecha, impuestos y cargos configurables, e importes en USD.
 - Registro manual de anticipos, pagos parciales, pagos completos y reembolsos.
@@ -35,6 +35,7 @@ Los objetivos operativos y las obligaciones legales deben validarse antes de uti
 | Acceso directo de huéspedes | Los usuarios previstos del MVP son exclusivamente empleados del hotel. |
 | Interfaz gráfica para empleados o huéspedes | El entregable acordado es la API; sus consumidores quedan fuera de esta especificación. |
 | Notificaciones por correo, SMS u otros canales externos | Se acordaron avisos consultables mediante la API. |
+| Registro o seguimiento de incidencias de averías en la API | Las averías urgentes que afecten reservas confirmadas se gestionarán manualmente mediante el procedimiento del hotel. |
 | Emisión de comprobantes o facturación electrónica | No se acordó su implementación; registrar un pago no equivale a emitir un comprobante fiscal. |
 
 ## 5. Actores y casos de uso principales
@@ -50,11 +51,11 @@ Los objetivos operativos y las obligaciones legales deben validarse antes de uti
 | ID | Caso de uso | Actor | Requisitos relacionados |
 | --- | --- | --- | --- |
 | CU-001 | Iniciar sesión y acceder según el rol | Personal | RF-001–RF-003 |
-| CU-002 | Administrar usuarios, tipos, habitaciones y bloqueos | Administrador | RF-004–RF-017 |
-| CU-003 | Consultar disponibilidad y crear o asignar una reserva | Personal autorizado | RF-018–RF-027, RF-030–RF-031 |
-| CU-004 | Consultar, modificar o cancelar una reserva | Personal autorizado; administrador para cancelación y aprobación | RF-028–RF-029, RF-032–RF-036 |
+| CU-002 | Administrar usuarios, tipos, habitaciones y bloqueos | Administrador | RF-004–RF-017, RF-065 |
+| CU-003 | Consultar disponibilidad y crear o asignar una reserva | Personal autorizado | RF-018–RF-027, RF-030–RF-031, RF-064 |
+| CU-004 | Consultar, modificar o cancelar una reserva | Personal autorizado; administrador para cancelación y aprobación | RF-028–RF-029, RF-032–RF-036, RF-064 |
 | CU-005 | Consultar avisos y confirmar una solicitud en espera | Personal autorizado | RF-037–RF-040 |
-| CU-006 | Registrar entrada y salida | Personal autorizado | RF-041–RF-043, RF-063 |
+| CU-006 | Registrar entrada y salida, consultar avisos de estancia y confirmar ausencias | Personal autorizado | RF-038, RF-041–RF-043, RF-063, RF-066–RF-072 |
 | CU-007 | Administrar tarifas, calcular importes y registrar movimientos | Administrador para tarifas; personal autorizado para las demás operaciones | RF-044–RF-054 |
 | CU-008 | Registrar eventos de auditoría | Sistema, a partir de acciones del personal | RF-055–RF-062 |
 
@@ -85,6 +86,7 @@ exclusiones indicados en otras secciones también se aplican.
 - **RF-015.** El administrador podrá bloquear una habitación por un intervalo de fechas.
 - **RF-016.** El administrador podrá bloquear una habitación de forma indefinida hasta que sea habilitada.
 - **RF-017.** El administrador podrá desbloquear una habitación.
+- **RF-065.** La API rechazará un bloqueo, una desactivación de habitación o tipo, o una reducción de capacidad si una habitación asignada a una reserva confirmada deja de estar disponible o de ser compatible durante las fechas reservadas, o si el cambio impide asignar una habitación compatible a cada reserva confirmada sin asignación durante toda su estancia. El rechazo dejará intactos el inventario y las reservas. Si el cambio se debe a una avería urgente, el personal gestionará la incidencia mediante el procedimiento del hotel; la API no cancelará ni trasladará reservas automáticamente.
 
 ### Disponibilidad y reservas
 
@@ -107,16 +109,25 @@ exclusiones indicados en otras secciones también se aplican.
 - **RF-034.** Al aprobar un cambio pendiente, si la opción solicitada sigue sin disponibilidad, se cancelará la reserva original y se creará una solicitud en espera mediante una operación consistente.
 - **RF-035.** Si el administrador realiza directamente un cambio sin disponibilidad, se cancelará la reserva original y se creará una solicitud en espera mediante una operación consistente.
 - **RF-036.** El administrador podrá cancelar una reserva.
+- **RF-064.** Al crear o modificar una reserva, la fecha de salida deberá ser posterior a la de entrada. Una solicitud con fechas iguales o invertidas se rechazará como inválida, sin modificar una reserva existente ni crear una solicitud en espera.
 
 ### Lista de espera y estancia
 
 - **RF-037.** Cuando aparezca disponibilidad compatible con una solicitud en espera, el sistema generará un aviso para el personal.
-- **RF-038.** El personal autorizado podrá consultar los avisos de disponibilidad mediante la API.
+- **RF-038.** El personal autorizado podrá consultar mediante la API los avisos de disponibilidad, de salida tardía y de posible ausencia.
 - **RF-039.** El personal autorizado podrá confirmar manualmente una solicitud en espera.
 - **RF-040.** La API comprobará nuevamente la disponibilidad al confirmar una solicitud en espera; si ya no está disponible, no confirmará la reserva.
 - **RF-041.** La API rechazará un check-in si la reserva no tiene una habitación asignada.
 - **RF-042.** La API rechazará un check-in si la habitación asignada no está lista para ocupar.
-- **RF-043.** Al registrar el check-out, el personal autorizado seleccionará el estado operativo que tendrá la habitación.
+- **RF-043.** Al registrar el check-out de una reserva en estado «En estancia», esta pasará a «Finalizada» y la habitación quedará en el estado operativo que seleccione el personal autorizado.
+- **RF-063.** El personal autorizado podrá registrar el check-in de una reserva confirmada con una habitación asignada y lista para ocupar. Al registrarlo, la reserva pasará a «En estancia».
+- **RF-066.** El check-in normal comienza a las 15:00 de la fecha de entrada. Antes de las 15:00 de ese mismo día, el personal autorizado podrá autorizar y registrar un check-in anticipado si la habitación asignada está lista para ocupar.
+- **RF-067.** Para registrar un check-in en un día distinto del previsto, el personal autorizado deberá modificar primero las fechas de la reserva y verificar la disponibilidad para las nuevas fechas antes de confirmar el cambio.
+- **RF-068.** El check-out normal es hasta las 12:00 de la fecha de salida. Si a las 12:30 de ese día la reserva sigue «En estancia» y no se ha registrado el check-out, el sistema generará un aviso de salida tardía para el personal. El aviso no cambiará el estado de la reserva, no ampliará la estancia ni la cancelará.
+- **RF-069.** Si el personal registra un check-out antes de la fecha de salida prevista, se liberarán en esa misma operación las noches restantes que el huésped no utilizará.
+- **RF-070.** Para confirmar que el huésped puede quedarse una o más noches adicionales, el personal autorizado deberá comprobar la disponibilidad y ampliar primero la reserva. Registrar un check-out tardío no autoriza ni sustituye una ampliación.
+- **RF-071.** Si a las 22:00 de la fecha de entrada la reserva sigue confirmada y no tiene un check-in registrado, el sistema generará un aviso de posible ausencia para el personal. El aviso no cambiará el estado de la reserva, no liberará noches ni la cancelará.
+- **RF-072.** Cuando el personal autorizado confirme que un huésped no se presentó, la reserva confirmada sin check-in pasará a «No se presentó» y se liberarán las noches restantes en la misma operación. Esta transición es manual y distinta de la cancelación.
 
 ### Tarifas, importes y movimientos
 
@@ -142,10 +153,6 @@ exclusiones indicados en otras secciones también se aplican.
 - **RF-060.** El sistema auditará los accesos exitosos y fallidos.
 - **RF-061.** El sistema auditará las consultas de datos de huéspedes.
 - **RF-062.** Cada evento de auditoría incluirá acción, fecha y hora y resultado, y, cuando sea posible, cuenta y recurso afectados.
-
-### Registro de entrada
-
-- **RF-063.** El personal autorizado podrá registrar el check-in de una reserva con una habitación asignada y lista para ocupar.
 
 ## 7. Requisitos no funcionales
 
@@ -293,6 +300,32 @@ Característica: Inventario de habitaciones
     Dado una habitación bloqueada y un administrador autenticado
     Cuando el administrador la desbloquea
     Entonces el bloqueo deja de impedir su disponibilidad
+
+  @CA-072 @RF-065
+  Esquema del escenario: Cambio que compromete una reserva asignada
+    Dado una reserva confirmada para dos huéspedes con una habitación asignada y un administrador autenticado
+    Cuando el administrador intenta <cambio>
+    Entonces la API rechaza el cambio sin modificar el inventario ni la reserva
+
+    Ejemplos:
+      | cambio                                               |
+      | bloquear la habitación durante las fechas reservadas |
+      | bloquear indefinidamente la habitación               |
+      | desactivar la habitación                             |
+      | desactivar el tipo de habitación                     |
+      | reducir la capacidad de la habitación a un huésped    |
+
+  @CA-073 @RF-065
+  Escenario: Cambio que compromete una reserva sin asignación
+    Dado una reserva confirmada sin asignación y una única habitación compatible durante toda la estancia
+    Cuando el administrador intenta bloquear esa habitación durante una noche de la estancia
+    Entonces la API rechaza el bloqueo y conserva la reserva confirmada sin asignación
+
+  @CA-074 @RF-065
+  Escenario: Cambio que conserva la disponibilidad comprometida
+    Dado una reserva confirmada sin asignación y dos habitaciones compatibles durante toda la estancia
+    Cuando el administrador bloquea una de esas habitaciones
+    Entonces se registra el bloqueo y la reserva permanece confirmada sin asignación
 ```
 
 ### Disponibilidad y reservas
@@ -438,6 +471,19 @@ Característica: Disponibilidad y reservas
     Dado que hay habitaciones compatibles libres en cada noche pero ninguna durante toda la estancia
     Cuando se intenta confirmar una reserva por tipo para esas fechas
     Entonces la reserva no se confirma
+
+  @CA-075 @RF-064
+  Esquema del escenario: Fechas sin una noche de estancia
+    Dado un usuario autorizado y una fecha de entrada el día 10
+    Cuando intenta <operacion> con fecha de salida el día <salida>
+    Entonces la API rechaza las fechas sin crear una reserva o solicitud en espera ni modificar una reserva existente
+
+    Ejemplos:
+      | operacion           | salida |
+      | crear una reserva   | 10     |
+      | cambiar una reserva | 10     |
+      | crear una reserva   | 9      |
+      | cambiar una reserva | 9      |
 ```
 
 ### Lista de espera y estancia
@@ -453,10 +499,16 @@ Característica: Lista de espera y estancia
     Entonces el sistema genera un aviso para el personal
 
   @CA-038 @RF-038
-  Escenario: Consulta de avisos
-    Dado un aviso de disponibilidad generado y un usuario autorizado
+  Esquema del escenario: Consulta de avisos
+    Dado un aviso de <tipo> generado y un usuario autorizado
     Cuando el usuario consulta los avisos mediante la API
     Entonces la API devuelve el aviso
+
+    Ejemplos:
+      | tipo             |
+      | disponibilidad   |
+      | salida tardía    |
+      | posible ausencia |
 
   @CA-039 @RF-039
   Escenario: Confirmación manual desde espera
@@ -484,15 +536,77 @@ Característica: Lista de espera y estancia
 
   @CA-043 @RF-043
   Escenario: Check-out con estado elegido
-    Dado una estancia para la que corresponde registrar el check-out
-    Cuando un usuario autorizado registra el check-out y selecciona pendiente de limpieza
-    Entonces se registra la salida y la habitación queda pendiente de limpieza
+    Dado una reserva «En estancia»
+    Cuando un usuario autorizado registra el check-out a las 12:00 del día de salida y selecciona pendiente de limpieza
+    Entonces la reserva queda «Finalizada» y la habitación queda pendiente de limpieza
 
   @CA-063 @RF-063
   Escenario: Check-in de una habitación lista
-    Dado una reserva con habitación asignada y lista para ocupar
-    Cuando un usuario autorizado registra el check-in
-    Entonces queda registrado el check-in de la reserva
+    Dado una reserva confirmada con habitación asignada y lista para ocupar
+    Cuando un usuario autorizado registra el check-in a las 15:00 del día de entrada
+    Entonces se registra la entrada y la reserva pasa a «En estancia»
+
+  @CA-076 @RF-066
+  Escenario: Check-in anticipado el mismo día
+    Dado una reserva confirmada con habitación asignada y lista para ocupar el día de entrada
+    Cuando el personal autorizado aprueba y registra el check-in a las 14:00 de ese día
+    Entonces la reserva pasa a «En estancia» sin cambiar sus fechas
+
+  @CA-077 @RF-067
+  Esquema del escenario: Check-in en otro día sin actualizar las fechas
+    Dado una reserva confirmada con habitación asignada y lista para ocupar
+    Cuando el personal intenta registrar el check-in un día <momento> de la fecha de entrada sin modificarla
+    Entonces la API rechaza el check-in y conserva la reserva confirmada
+
+    Ejemplos:
+      | momento |
+      | antes   |
+      | después |
+
+  @CA-078 @RF-067
+  Escenario: Check-in en la nueva fecha confirmada
+    Dado una reserva confirmada y una nueva fecha de entrada con disponibilidad
+    Cuando el personal autorizado verifica la disponibilidad, cambia las fechas y registra el check-in a las 15:00 del nuevo día con la habitación asignada y lista
+    Entonces la reserva pasa a «En estancia» con las nuevas fechas
+
+  @CA-079 @RF-068
+  Escenario: Aviso de salida tardía después de la tolerancia
+    Dado una reserva «En estancia» sin check-out a las 12:29 del día de salida
+    Y que no se ha generado un aviso de salida tardía
+    Cuando son las 12:30 y sigue sin registrarse el check-out
+    Entonces se genera un aviso de salida tardía y la reserva sigue «En estancia» con las mismas fechas
+
+  @CA-080 @RF-069
+  Escenario: Liberación de noches tras salida anticipada
+    Dado una reserva «En estancia» desde el día 9 con salida prevista el día 12
+    Cuando el personal autorizado registra el check-out el día 10
+    Entonces la reserva queda «Finalizada» y deja de comprometer las noches del 10 y del 11
+
+  @CA-081 @RF-070
+  Esquema del escenario: Solicitud de una noche adicional
+    Dado una reserva «En estancia» cuyo huésped solicita una noche más
+    Y que <disponibilidad> para esa noche
+    Cuando el personal autorizado comprueba la disponibilidad para ampliar la reserva
+    Entonces <resultado>
+
+    Ejemplos:
+      | disponibilidad        | resultado                                                   |
+      | hay disponibilidad    | se amplía la reserva antes de confirmar la noche al huésped |
+      | no hay disponibilidad | no se confirma la noche adicional                           |
+
+  @CA-082 @RF-071
+  Escenario: Aviso de posible ausencia sin liberar noches
+    Dado una reserva confirmada sin check-in a las 21:59 del día de entrada
+    Y que no se ha generado un aviso de posible ausencia
+    Cuando son las 22:00 y sigue sin registrarse el check-in
+    Entonces se genera un aviso de posible ausencia
+    Y la reserva permanece confirmada sin liberar noches
+
+  @CA-083 @RF-072
+  Escenario: Confirmación manual de una ausencia
+    Dado una reserva confirmada sin check-in con un aviso de posible ausencia
+    Cuando el personal autorizado confirma que el huésped no se presentó
+    Entonces la reserva pasa a «No se presentó» y deja de comprometer las noches restantes
 ```
 
 ### Tarifas, importes y movimientos
@@ -698,10 +812,10 @@ conservarse conforme a la política de retención que se defina.
 | Habitación | Identificador o número, tipo, capacidad, ubicación, descripción y estado operativo | Pertenece a un tipo; puede tener bloqueos y reservas asignadas. |
 | Bloqueo | Habitación, inicio y fin opcional | Pertenece a una habitación; un fin no definido representa un bloqueo indefinido. |
 | Huésped | Nombre completo, documento de identidad y, opcionalmente, teléfono, correo y notas | Puede ser titular de reservas y solicitudes en espera. |
-| Reserva | Huésped titular, fechas, cantidad de huéspedes, tipo, habitación asignada opcional y estado | Corresponde a una habitación como máximo; puede tener movimientos y solicitudes de cambio. |
+| Reserva | Huésped titular, fechas previstas, fecha y hora de check-in y check-out cuando se registren, cantidad de huéspedes, tipo, habitación asignada opcional y estado | Corresponde a una habitación como máximo; puede tener avisos de estancia, movimientos y solicitudes de cambio. |
 | Solicitud de cambio | Reserva original, opción solicitada y estado de aprobación | Puede originar una solicitud en espera; registra la intervención del administrador cuando corresponda. |
 | Solicitud en espera | Huésped, fechas, cantidad de huéspedes, tipo o habitación solicitada y estado | Puede provenir de una solicitud nueva o de una reserva cancelada; puede generar avisos. |
-| Aviso | Solicitud en espera y datos de disponibilidad detectada | Pertenece a una solicitud en espera; no constituye una reserva confirmada. |
+| Aviso | Tipo de aviso y datos de la disponibilidad detectada, la salida tardía o la posible ausencia | Se asocia a una solicitud en espera o a una reserva, según el tipo; por sí solo no confirma, modifica ni cancela reservas. |
 | Tarifa | Tipo de habitación, fechas aplicables e importe en USD | Pertenece a un tipo de habitación. |
 | Impuesto o cargo | Configuración necesaria para calcular el concepto | Se aplica al cálculo de una estancia según reglas por definir. |
 | Movimiento | Tipo, importe en USD y datos de registro | Pertenece a una reserva; representa un anticipo, pago parcial, pago completo o reembolso manual. |
@@ -709,7 +823,7 @@ conservarse conforme a la política de retención que se defina.
 
 ## 10. Supuestos y dependencias
 
-- Las fechas de negocio se interpretan en la zona horaria del hotel, `America/Guayaquil`. Las estancias se representan como intervalos con entrada incluida y salida excluida.
+- Las fechas de negocio y los horarios de estancia se interpretan en la zona horaria del hotel, `America/Guayaquil`. Las estancias se representan como intervalos con entrada incluida y salida excluida.
 - El hotel tiene 20 habitaciones inicialmente; no se ha acordado un límite permanente de 20.
 - La disponibilidad por fechas es distinta del estado operativo: una habitación no lista no admite check-in, aunque pueda consultarse su disponibilidad para una estancia futura.
 - Un aviso de la lista de espera no garantiza disponibilidad hasta la confirmación y su nueva comprobación.
@@ -718,12 +832,9 @@ conservarse conforme a la política de retención que se defina.
 
 ## 11. Preguntas abiertas
 
-- **PA-001.** ¿Se permiten estancias de cero noches? Como supuesto para reservas nocturnas, la salida sería posterior a la entrada.
-- **PA-002.** ¿Cómo se resuelven los bloqueos, desactivaciones o cambios de capacidad que afecten reservas previamente confirmadas? No se deben cancelar ni trasladar reservas silenciosamente.
 - **PA-003.** ¿Cómo se relaciona el estado fuera de servicio o mantenimiento con los bloqueos y quién puede cambiarlo sin eludir los permisos de administrador?
 - **PA-004.** ¿Qué sucede si se rechaza una solicitud de cambio y cómo se tratan los cambios que dejan de necesitar aprobación?
 - **PA-005.** ¿Qué prioridad tiene la lista de espera, cuánto dura un aviso y cómo se gestionan varios interesados en la misma disponibilidad?
-- **PA-006.** ¿Cuáles son las transiciones de estado y las reglas de check-in y check-out fuera de las fechas previstas, incluidas las ausencias?
 - **PA-007.** ¿Qué reglas se aplican ante tarifas ausentes o solapadas, cambios posteriores a la reserva, redondeo e impuestos o cargos aplicables?
 - **PA-008.** ¿Cuáles son las políticas de cancelación, reembolso, autorización de reembolsos, sobrepagos y tratamiento del saldo?
 - **PA-009.** ¿Qué permisos detallados tienen los roles para los movimientos, impuestos y cargos, avisos y consulta de auditoría?
