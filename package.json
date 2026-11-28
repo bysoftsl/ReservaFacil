@@ -12,6 +12,13 @@
     "pretest": "npm run build",
     "test": "node --test && jest",
     "test:unit": "npm run build && jest",
+    "premigration:generate": "npm run build",
+    "migration:generate": "typeorm migration:generate -d dist/infrastructure/persistence/typeorm/ormconfig.js",
+    "postmigration:generate": "prettier --write src/infrastructure/persistence/typeorm/migrations",
+    "premigration:run": "npm run build",
+    "migration:run": "typeorm migration:run -d dist/infrastructure/persistence/typeorm/ormconfig.js",
+    "premigration:revert": "npm run build",
+    "migration:revert": "typeorm migration:revert -d dist/infrastructure/persistence/typeorm/ormconfig.js",
     "lint": "eslint .",
     "format": "prettier --write src test *.mjs *.json",
     "format:check": "prettier --check src test *.mjs *.json"

@@ -1,10 +1,17 @@
 import { describe, expect, it, jest } from '@jest/globals';
+import { Module } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from '../../app.module';
 import { ReservationState, RoomState } from '../../domain/stay-state-machine';
 import type { StayTransition, StayTransitionResult } from '../../domain/stay-state-machine';
+import { StayTransitionAdapter } from '../../infrastructure/adapters/domain/stay-transition.adapter';
+import { STAY_TRANSITION_PORT } from '../ports/out/stay-transition.port';
 import type { StayTransitionPort } from '../ports/out/stay-transition.port';
 import { ChangeStayStateUseCase } from './change-stay-state.use-case';
+
+@Module({
+  providers: [ChangeStayStateUseCase, { provide: STAY_TRANSITION_PORT, useClass: StayTransitionAdapter }],
+})
+class StayTransitionTestModule {}
 
 describe('ChangeStayStateUseCase', () => {
   it('returns the joint state changes from the port for a valid check-in', () => {
@@ -44,7 +51,7 @@ describe('ChangeStayStateUseCase', () => {
   });
 
   it('resolves the real adapter through NestJS and preserves domain decisions', async () => {
-    const app = await NestFactory.createApplicationContext(AppModule, { logger: false });
+    const app = await NestFactory.createApplicationContext(StayTransitionTestModule, { logger: false });
 
     try {
       const useCase = app.get(ChangeStayStateUseCase);
