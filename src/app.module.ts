@@ -6,6 +6,8 @@ import { AppController } from './app.controller';
 import { STAY_TRANSITION_PORT } from './application/ports/out/stay-transition.port';
 import { ChangeStayStateUseCase } from './application/use-cases/change-stay-state.use-case';
 import { StayTransitionAdapter } from './infrastructure/adapters/domain/stay-transition.adapter';
+import { parseAuthConfig } from './infrastructure/auth/auth-config';
+import { AuthModule } from './infrastructure/auth/auth.module';
 import { createDataSourceOptions } from './infrastructure/persistence/typeorm/data-source-options';
 import { parseDatabaseConfig } from './infrastructure/persistence/typeorm/database-config';
 import { ProblemDetailsFilter } from './interfaces/http/problem-details.filter';
@@ -24,8 +26,9 @@ import { RequestIdInterceptor } from './interfaces/http/request-id.interceptor';
         }
 
         const database = parseDatabaseConfig(env);
+        const auth = parseAuthConfig(env);
 
-        return { ...env, PORT: port, DB_PORT: database.port };
+        return { ...env, PORT: port, DB_PORT: database.port, JWT_EXPIRES_IN: auth.jwtExpiresInSeconds };
       },
     }),
     TypeOrmModule.forRootAsync({
@@ -39,6 +42,7 @@ import { RequestIdInterceptor } from './interfaces/http/request-id.interceptor';
           database: config.getOrThrow<string>('DB_NAME'),
         }),
     }),
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [
