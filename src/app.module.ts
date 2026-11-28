@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
+import { STAY_TRANSITION_PORT } from './application/ports/out/stay-transition.port';
+import { ChangeStayStateUseCase } from './application/use-cases/change-stay-state.use-case';
+import { StayTransitionAdapter } from './infrastructure/adapters/domain/stay-transition.adapter';
 
 @Module({
   imports: [
@@ -18,5 +21,6 @@ import { AppController } from './app.controller';
     }),
   ],
   controllers: [AppController],
+  providers: [ChangeStayStateUseCase, { provide: STAY_TRANSITION_PORT, useClass: StayTransitionAdapter }],
 })
 export class AppModule {}
