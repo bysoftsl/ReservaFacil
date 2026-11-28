@@ -18,6 +18,7 @@ src/
       out/                     # Repositorios, unidad de trabajo, reloj,
                                # hash de contraseñas, emisión de JWT y auditoría
   infrastructure/
+    adapters/domain/           # Adaptador de la máquina de estados al puerto
     persistence/typeorm/       # Entidades, mapeadores, adaptadores y migraciones
     security/                  # Implementaciones de JWT y hash
     observability/             # Registros operativos y métricas
@@ -33,6 +34,7 @@ test/
 
 - **Dependencias hacia dentro.** El dominio no importa NestJS, TypeORM ni HTTP. La aplicación depende del dominio y es dueña de los puertos. Los adaptadores traducen DTO y filas de base de datos; no exponen entidades ORM ni implementan las transiciones de negocio. NestJS conecta las implementaciones en el punto de composición.
 - **Integración del núcleo existente.** Los casos de uso invocan `planStayTransition` con el rol autenticado y los estados leídos de la habitación realmente asignada y de la reserva. Aplican sus cambios juntos o rechazan la operación. Adaptan `role_not_allowed` a `403`, `invalid_state_transition` a `409` e `invalid_initial_state` a `422` en HTTP. La aplicación verifica además fechas y horarios, asignación, disponibilidad y tarifas donde corresponda. No se exponen endpoints que escriban el estado de reserva directamente.
+- **Base implementada de la Tarea 2.** [ChangeStayStateUseCase](../src/application/use-cases/change-stay-state.use-case.ts) recibe el rol y un `StayTransition`, delega en [StayTransitionPort](../src/application/ports/out/stay-transition.port.ts) y devuelve `StayTransitionResult` sin modificarlo. [StayTransitionAdapter](../src/infrastructure/adapters/domain/stay-transition.adapter.ts) invoca la función pura y `AppModule` lo conecta mediante el token `STAY_TRANSITION_PORT`. Este caso de uso solo valida y planifica: no escribe estados; la persistencia atómica y la traducción HTTP quedan para las tareas posteriores. `npm run test:unit` compila y ejecuta las pruebas Jest con un puerto simulado y una comprobación de la composición real de NestJS; `npm test` conserva también las pruebas existentes de dominio y salud HTTP.
 - **Límites claros.** Recepción y Administración comparten las operaciones concedidas por la matriz. En espera y pendiente de aprobación son estados de solicitudes distintas, no de la reserva. Los avisos no cambian estados y no tienen API de escritura. El estado de mantenimiento existe en el dominio, pero sus transiciones están bloqueadas hasta PA-003.
 
 ## 2. Modelo de datos: TypeORM + MySQL InnoDB
