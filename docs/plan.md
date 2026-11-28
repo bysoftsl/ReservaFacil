@@ -19,6 +19,7 @@ src/
                                # hash de contraseñas, emisión de JWT y auditoría
   infrastructure/
     adapters/domain/           # Adaptador de la máquina de estados al puerto
+    auth/                      # AuthModule, AuthController y configuración de autenticación
     persistence/typeorm/       # Entidades, mapeadores, adaptadores y migraciones
     security/                  # Implementaciones de JWT y hash
     observability/             # Registros operativos y métricas
@@ -73,7 +74,7 @@ Para RF-026, conservar las asignaciones fijas y resolver las reservas sin habita
 
 ## 3. Contrato de API para OpenAPI
 
-Publicar el contrato OpenAPI desde el adaptador HTTP con `@nestjs/swagger`. Prefijo propuesto: `/api/v1`. Los estados normativos están en la [sección 7: contrato HTTP mínimo](./spec.md#contrato-http-mínimo); la [sección 8](./spec.md#8-criterios-de-aceptación) define los escenarios que deben verificarlos. Las rutas siguientes son el inventario mínimo propuesto, no un documento OpenAPI generado.
+Publicar el contrato OpenAPI desde el adaptador HTTP con `@nestjs/swagger`. Prefijo: `/api/v1` (aplicado en `src/interfaces/http/configure-http-app.ts`; `GET /health` queda fuera). Los estados normativos están en la [sección 7: contrato HTTP mínimo](./spec.md#contrato-http-mínimo); la [sección 8](./spec.md#8-criterios-de-aceptación) define los escenarios que deben verificarlos. Las rutas siguientes son el inventario mínimo propuesto, no un documento OpenAPI generado.
 
 **Transversal:** todas las operaciones salvo el login usan JWT Bearer (`401` con `WWW-Authenticate: Bearer` para token ausente o inválido). `403` si falta permiso, `400` para estructura, formato o cursor inválidos y `500` genérico ante fallos inesperados. `404` si no existe el recurso individual solicitado; una lista vacía es `200`. La tabla muestra los éxitos y los demás errores específicos de cada flujo.
 
